@@ -14,6 +14,39 @@ Universal command set and colourful shell configurations for Bash, Zsh and Power
     <p><strong>Be sure to <a href="#" title="star">⭐️</a> or <a href="#" title="fork">🔱</a> this repo if you find it useful! 😃</strong></p>
 </div>
 
+## Quick Start 🚀
+
+### GitHub Codespaces ☁️
+
+Open this repository in a GitHub Codespace to get a fully configured development environment in seconds:
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=main)
+
+The Codespace will automatically:
+- Install and configure zsh with Oh-My-Zsh
+- Set up Powerlevel10k theme with Nerd Fonts
+- Install essential plugins (autosuggestions, syntax highlighting)
+- Apply all dotfiles using chezmoi
+- Configure cross-platform aliases and functions
+
+### macOS & Linux 🖥️
+
+```bash
+# Install chezmoi and apply dotfiles in one command
+sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply alicerazd/dotfiles
+
+# Or, if you already have chezmoi installed
+chezmoi init --apply alicerazd/dotfiles
+```
+
+After installation, run the setup script to install all dependencies:
+
+```bash
+~/dotfiles.sh
+```
+
+<p align="right"><a href="#top" title="Back to top">🔝</a></p>
+
 ## Project goals ⚽
 
 -   Unified set of aliases and commands.
@@ -38,6 +71,7 @@ Use either one or many of these, the config files will be in place and ready to 
 
 ### 💻 Terminals
 
+-   [GitHub Codespaces](https://github.com/features/codespaces) ☁️ <sub><sup><b title="Linux">🐧</b></sup></sub>: [`.devcontainer/`](./.devcontainer/) _<sup>optimized for cloud development!</sup>_
 -   [Hyper](https://hyper.is/) <sub><sup><b title="Linux">🐧</b></sup></sub><b title="macOS"></b><b title="Windows">⊞</b>: [`~/.hyper.js`](./dot_hyper.js.tmpl)
 -   [iTerm2](https://iterm2.com/) <b title="macOS"></b>: [`~/.config/iterm/`](./dot_config/iterm)
 -   [macOS Terminal](https://support.apple.com/en-ca/guide/terminal/welcome/mac) <b title="macOS"></b>

@@ -11,9 +11,23 @@
 #
 # {{- /* This file supports Go's text/template language. */}}
 
-# {{- $email := promptString "Git email address for the author/committer" }}
-# {{- $name := promptString "Git username for the author/committer" }}
+{{- $isCodespaces := env "CODESPACES" | not | not }}
+{{- $isGitHubActions := env "GITHUB_ACTIONS" | not | not }}
+{{- $isCI := or $isGitHubActions $isCodespaces }}
+
+{{- $email := "" }}
+{{- $name := "" }}
+
+{{- if $isCodespaces }}
+{{-   $email = "codespace@github.com" }}
+{{-   $name = env "GITHUB_USER" }}
+{{- else if not $isCI }}
+{{-   $email = promptString "Git email address for the author/committer" }}
+{{-   $name = promptString "Git username for the author/committer" }}
+{{- end }}
 
 [data]
     email = "{{ $email }}"
     name = "{{ $name }}"
+    isCodespaces = {{ $isCodespaces }}
+    isCI = {{ $isCI }}

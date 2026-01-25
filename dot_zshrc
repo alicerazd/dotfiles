@@ -10,6 +10,13 @@
 # shellcheck source=/dev/null
 # shellcheck disable=SC2034
 
+# Detect GitHub Codespaces environment
+if [ -n "$CODESPACES" ]; then
+    export IS_CODESPACES=true
+else
+    export IS_CODESPACES=false
+fi
+
 # Hide default user from local prompt.
 export DEFAULT_USER="${USER}"
 

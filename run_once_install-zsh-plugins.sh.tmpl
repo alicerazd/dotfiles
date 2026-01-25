@@ -1,0 +1,43 @@
+#!/bin/sh
+# -*-mode:sh-*- vim:ft=shell-script
+
+# run_once_install-zsh-plugins.sh.tmpl
+# =============================================================================
+# Installs essential zsh plugins for enhanced shell experience.
+# This script runs once during chezmoi initialization.
+
+set -e
+
+ZSH_CUSTOM="${ZSH_CUSTOM:-${HOME}/.oh-my-zsh/custom}"
+
+# Ensure Oh My Zsh is installed first
+if [ ! -d "${HOME}/.oh-my-zsh" ]; then
+    echo "Oh My Zsh is not installed, please install it first"
+    exit 1
+fi
+
+echo "Installing zsh plugins..."
+
+# Install zsh-autosuggestions
+PLUGIN_DIR="${ZSH_CUSTOM}/plugins/zsh-autosuggestions"
+if [ ! -d "$PLUGIN_DIR" ]; then
+    echo "Installing zsh-autosuggestions..."
+    git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions "$PLUGIN_DIR" || {
+        echo "Failed to install zsh-autosuggestions"
+    }
+else
+    echo "✓ zsh-autosuggestions already installed"
+fi
+
+# Install zsh-syntax-highlighting
+PLUGIN_DIR="${ZSH_CUSTOM}/plugins/zsh-syntax-highlighting"
+if [ ! -d "$PLUGIN_DIR" ]; then
+    echo "Installing zsh-syntax-highlighting..."
+    git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting.git "$PLUGIN_DIR" || {
+        echo "Failed to install zsh-syntax-highlighting"
+    }
+else
+    echo "✓ zsh-syntax-highlighting already installed"
+fi
+
+echo "✓ Zsh plugins installed successfully"

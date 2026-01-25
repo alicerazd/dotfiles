@@ -1,0 +1,25 @@
+#!/bin/sh
+# -*-mode:sh-*- vim:ft=shell-script
+
+# run_once_install-oh-my-zsh.sh.tmpl
+# =============================================================================
+# Installs Oh My Zsh framework for zsh shell customization.
+# This script runs once during chezmoi initialization.
+
+set -e
+
+# Check if Oh My Zsh is already installed
+if [ -d "${HOME}/.oh-my-zsh" ]; then
+    echo "Oh My Zsh is already installed, skipping..."
+    exit 0
+fi
+
+echo "Installing Oh My Zsh..."
+
+# Install Oh My Zsh in unattended mode
+RUNZSH=no CHSH=no sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" || {
+    echo "Failed to install Oh My Zsh"
+    exit 1
+}
+
+echo "✓ Oh My Zsh installed successfully"

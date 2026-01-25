@@ -1,0 +1,44 @@
+#!/bin/sh
+# -*-mode:sh-*- vim:ft=shell-script
+
+# run_once_before_setup-path.sh.tmpl
+# =============================================================================
+# Sets up PATH and environment for multi-platform support.
+# This script runs once before other chezmoi scripts.
+
+set -e
+
+echo "Setting up PATH and environment..."
+
+# Detect platform
+PLATFORM="unknown"
+if [ "$(uname)" = "Darwin" ]; then
+    PLATFORM="macos"
+elif [ "$(uname)" = "Linux" ]; then
+    PLATFORM="linux"
+fi
+
+echo "Detected platform: $PLATFORM"
+
+# Ensure local bin directory exists
+mkdir -p "$HOME/.local/bin"
+
+# Set up Homebrew on macOS
+if [ "$PLATFORM" = "macos" ]; then
+    # Check if Homebrew is installed
+    if ! command -v brew >/dev/null 2>&1; then
+        echo "Homebrew not found on macOS. Consider installing it from https://brew.sh"
+    else
+        echo "✓ Homebrew detected"
+    fi
+fi
+
+# Set up Linuxbrew if in Codespaces or Linux
+if [ "$PLATFORM" = "linux" ] || [ -n "$CODESPACES" ]; then
+    HOMEBREW_PREFIX="/home/linuxbrew/.linuxbrew"
+    if [ -d "$HOMEBREW_PREFIX" ]; then
+        echo "✓ Linuxbrew detected at $HOMEBREW_PREFIX"
+    fi
+fi
+
+echo "✓ PATH setup complete"
