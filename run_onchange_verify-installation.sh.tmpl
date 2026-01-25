@@ -1,0 +1,100 @@
+#!/bin/sh
+# -*-mode:sh-*- vim:ft=shell-script
+
+# run_onchange_verify-installation.sh.tmpl
+# =============================================================================
+# Verifies that the zsh-quickstart-kit functionality is properly installed.
+# This script runs whenever this file changes.
+
+# Check if we're in a login shell or interactive shell
+# Skip verification if we're not in an interactive context
+if [ -z "$PS1" ] && [ -z "$CODESPACES" ]; then
+    exit 0
+fi
+
+echo "Verifying zsh-quickstart-kit installation..."
+
+# Track if we found any issues
+ISSUES=0
+
+# Check for zsh
+if command -v zsh >/dev/null 2>&1; then
+    echo "✓ zsh is installed"
+else
+    echo "✗ zsh is not installed"
+    ISSUES=$((ISSUES + 1))
+fi
+
+# Check for Oh-My-Zsh
+if [ -d "$HOME/.oh-my-zsh" ]; then
+    echo "✓ Oh-My-Zsh is installed"
+else
+    echo "✗ Oh-My-Zsh is not installed"
+    ISSUES=$((ISSUES + 1))
+fi
+
+# Check for Powerlevel10k
+P10K_DIR="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k"
+if [ -d "$P10K_DIR" ]; then
+    echo "✓ Powerlevel10k theme is installed"
+else
+    echo "✗ Powerlevel10k theme is not installed"
+    ISSUES=$((ISSUES + 1))
+fi
+
+# Check for zsh-autosuggestions
+PLUGIN_DIR="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-autosuggestions"
+if [ -d "$PLUGIN_DIR" ]; then
+    echo "✓ zsh-autosuggestions plugin is installed"
+else
+    echo "✗ zsh-autosuggestions plugin is not installed"
+    ISSUES=$((ISSUES + 1))
+fi
+
+# Check for zsh-syntax-highlighting
+PLUGIN_DIR="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting"
+if [ -d "$PLUGIN_DIR" ]; then
+    echo "✓ zsh-syntax-highlighting plugin is installed"
+else
+    echo "✗ zsh-syntax-highlighting plugin is not installed"
+    ISSUES=$((ISSUES + 1))
+fi
+
+# Check for .zshrc
+if [ -f "$HOME/.zshrc" ]; then
+    echo "✓ .zshrc configuration file exists"
+else
+    echo "✗ .zshrc configuration file is missing"
+    ISSUES=$((ISSUES + 1))
+fi
+
+# Check for chezmoi
+if command -v chezmoi >/dev/null 2>&1; then
+    echo "✓ chezmoi is installed"
+else
+    echo "✗ chezmoi is not installed"
+    ISSUES=$((ISSUES + 1))
+fi
+
+echo ""
+if [ $ISSUES -eq 0 ]; then
+    echo "✅ All components verified successfully!"
+    echo ""
+    echo "To start using your configured zsh shell:"
+    if [ "$SHELL" != "$(command -v zsh)" ] && [ -z "$CODESPACES" ]; then
+        echo "  1. Set zsh as default: chsh -s \$(which zsh)"
+        echo "  2. Start a new shell session or run: exec zsh"
+    else
+        echo "  - Run: exec zsh"
+    fi
+else
+    echo "⚠️  Found $ISSUES issue(s) with the installation"
+    echo ""
+    echo "To fix issues, try running:"
+    echo "  ~/dotfiles.sh"
+    echo ""
+    echo "Or manually re-apply dotfiles:"
+    echo "  chezmoi apply --force"
+fi
+
+echo ""

@@ -33,6 +33,7 @@ The Codespace will automatically:
 
 ```bash
 # Install chezmoi and apply dotfiles in one command
+# Replace 'alicerazd' with your GitHub username if you forked this repo
 sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply alicerazd/dotfiles
 
 # Or, if you already have chezmoi installed
