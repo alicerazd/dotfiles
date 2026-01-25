@@ -12,6 +12,7 @@ LICENSE
 README.md
 com.googlecode.iterm2.plist
 .devcontainer
+.devcontainer/**
 azure-pipelines.yml
 
 # Ignore non-macOS files.
