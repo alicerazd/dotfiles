@@ -10,6 +10,7 @@
 *.gz
 LICENSE
 README.md
+ZSH_QUICKSTART_IMPLEMENTATION.md
 com.googlecode.iterm2.plist
 .devcontainer
 .devcontainer/**
