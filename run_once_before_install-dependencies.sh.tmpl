@@ -1,0 +1,67 @@
+#!/bin/sh
+# -*-mode:sh-*- vim:ft=shell-script
+
+# run_once_before_install-dependencies.sh.tmpl
+# =============================================================================
+# Installs essential system dependencies for dotfiles.
+# This script runs once before other chezmoi scripts on first initialization.
+
+set -e
+
+echo "Installing essential dependencies..."
+
+# Detect platform
+PLATFORM="unknown"
+if [ "$(uname)" = "Darwin" ]; then
+    PLATFORM="macos"
+elif [ "$(uname)" = "Linux" ]; then
+    PLATFORM="linux"
+fi
+
+echo "Platform: $PLATFORM"
+
+# Install dependencies based on platform
+if [ "$PLATFORM" = "macos" ]; then
+    # macOS - use Homebrew
+    if command -v brew >/dev/null 2>&1; then
+        echo "Homebrew is already installed"
+    else
+        echo "Installing Homebrew..."
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" || {
+            echo "Failed to install Homebrew, continuing..."
+        }
+    fi
+    
+    # Install essential tools via Homebrew
+    if command -v brew >/dev/null 2>&1; then
+        echo "Installing essential tools via Homebrew..."
+        brew install git curl wget || echo "Some Homebrew packages failed to install"
+    fi
+
+elif [ "$PLATFORM" = "linux" ]; then
+    # Linux - detect package manager
+    if command -v apt-get >/dev/null 2>&1; then
+        echo "Detected apt package manager (Debian/Ubuntu)"
+        if [ -n "$CODESPACES" ]; then
+            # In Codespaces, packages are usually pre-installed
+            echo "Running in GitHub Codespaces - skipping package installation"
+        else
+            echo "Updating package lists..."
+            sudo apt-get update -qq || echo "Failed to update package lists"
+            echo "Installing essential tools..."
+            sudo apt-get install -y git curl wget zsh fonts-powerline || echo "Some packages failed to install"
+        fi
+    elif command -v yum >/dev/null 2>&1; then
+        echo "Detected yum package manager (RHEL/CentOS)"
+        echo "Installing essential tools..."
+        sudo yum install -y git curl wget zsh || echo "Some packages failed to install"
+    elif command -v dnf >/dev/null 2>&1; then
+        echo "Detected dnf package manager (Fedora)"
+        echo "Installing essential tools..."
+        sudo dnf install -y git curl wget zsh || echo "Some packages failed to install"
+    else
+        echo "Unknown package manager - please install git, curl, wget, and zsh manually"
+    fi
+fi
+
+echo "✓ Essential dependencies check complete"

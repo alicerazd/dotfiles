@@ -1,0 +1,51 @@
+#!/bin/sh
+# -*-mode:sh-*- vim:ft=shell-script
+
+# run_once_after_set-default-shell.sh.tmpl
+# =============================================================================
+# Sets zsh as the default shell if it's not already.
+# This script runs once after other chezmoi scripts.
+
+set -e
+
+# Check if zsh is installed
+if ! command -v zsh >/dev/null 2>&1; then
+    echo "zsh is not installed. Please install it first."
+    exit 0
+fi
+
+# Get current shell
+CURRENT_SHELL="$(basename "$SHELL")"
+
+if [ "$CURRENT_SHELL" = "zsh" ]; then
+    echo "✓ zsh is already the default shell"
+    exit 0
+fi
+
+echo "Current shell: $CURRENT_SHELL"
+echo "Attempting to set zsh as default shell..."
+
+# Get zsh path
+ZSH_PATH="$(command -v zsh)"
+
+# Check if zsh is in /etc/shells
+if ! grep -q "^$ZSH_PATH$" /etc/shells 2>/dev/null; then
+    echo "Adding $ZSH_PATH to /etc/shells..."
+    echo "$ZSH_PATH" | sudo tee -a /etc/shells >/dev/null || {
+        echo "Failed to add zsh to /etc/shells. You may need to do this manually."
+    }
+fi
+
+# Change default shell
+if [ -n "$CODESPACES" ]; then
+    # In Codespaces, we can't use chsh, but zsh is set via devcontainer.json
+    echo "Running in GitHub Codespaces - shell is configured via devcontainer"
+else
+    # Try to change shell
+    chsh -s "$ZSH_PATH" 2>/dev/null || {
+        echo "⚠️  Could not automatically change shell to zsh."
+        echo "   Please run: chsh -s $ZSH_PATH"
+    }
+fi
+
+echo "✓ Default shell configuration complete"
