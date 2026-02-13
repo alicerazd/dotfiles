@@ -509,7 +509,7 @@ alias drm='docker rm'
 alias drmi='docker rmi'
 alias dexec='docker exec -it'
 alias dlogs='docker logs -f'
-alias dstop='docker stop $(docker ps -q)'
+alias dstop='docker ps -q | xargs -r docker stop'
 alias dclean='docker system prune -af'
 
 # Docker Compose shortcuts  
@@ -573,8 +573,12 @@ alias gd='git diff'
 alias gds='git diff --staged'
 
 # Network diagnostic shortcuts
-alias ports='netstat -tulanp'
-alias listening='netstat -an | grep LISTEN'
+if command -v ss > /dev/null; then
+    alias ports='ss -tulanp'
+else
+    alias ports='netstat -tulan'
+fi
+alias listening='ss -an | grep LISTEN || netstat -an | grep LISTEN'
 alias myip='curl -s https://ifconfig.me'
 alias speedtest='curl -s https://raw.githubusercontent.com/sivel/speedtest-cli/master/speedtest.py | python3 -'
 

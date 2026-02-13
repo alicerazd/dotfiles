@@ -296,7 +296,7 @@ if [ "$IS_WSL" = "true" ]; then
     
     # Set DISPLAY for X11 forwarding (WSL2)
     if grep -qi "WSL2\|microsoft-standard" /proc/version 2>/dev/null; then
-        export DISPLAY=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}'):0
+        export DISPLAY=$(awk '/nameserver/ {print $2; exit}' /etc/resolv.conf):0
     fi
     
     # Windows-WSL clipboard integration

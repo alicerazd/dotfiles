@@ -98,7 +98,7 @@ brew "bandwhich"                            # Network utilization monitor
 brew "curl"                                 # HTTP client
 brew "dnsutils"                             # DNS utilities (dig, nslookup)
 brew "nmap"                                 # Network mapper
-brew "netcat"                               # Networking utility
+# brew "netcat"                             # Networking utility (included with macOS)
 brew "openssl"                              # Cryptography toolkit
 brew "socat"                                # Socket relay
 brew "ssh-copy-id"                          # SSH public key installer
