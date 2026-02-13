@@ -15,8 +15,13 @@
 {{- $isGitHubActions := env "GITHUB_ACTIONS" | not | not }}
 {{- $isCI := or $isGitHubActions $isCodespaces }}
 
+{{- /* Detect WSL environment */}}
+{{- $isWSL := or (env "WSL_DISTRO_NAME") (env "WSLENV") | not | not }}
+{{- $isWindows := eq .chezmoi.os "windows" }}
+
 {{- $email := "" }}
 {{- $name := "" }}
+{{- $use1Password := false }}
 
 {{- if $isCodespaces }}
 {{-   $email = "codespace@github.com" }}
@@ -24,6 +29,7 @@
 {{- else if not $isCI }}
 {{-   $email = promptString "Git email address for the author/committer" }}
 {{-   $name = promptString "Git username for the author/committer" }}
+{{-   $use1Password = promptBool "Enable 1Password integration (requires 1Password CLI)" }}
 {{- end }}
 
 [data]
@@ -31,3 +37,6 @@
     name = "{{ $name }}"
     isCodespaces = {{ $isCodespaces }}
     isCI = {{ $isCI }}
+    isWSL = {{ $isWSL }}
+    isWindows = {{ $isWindows }}
+    use1Password = {{ $use1Password }}

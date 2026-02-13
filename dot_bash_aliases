@@ -496,3 +496,115 @@ if command -v curl > /dev/null; then
 else
     alias weather='wget -qO- --compression=auto --timeout=10 "https://wttr.in/?format=%l:+(%C)+%c++%t+\[%h,+%w\]"'
 fi
+
+
+# DevOps & Infrastructure Tools
+# -----------------------------------------------------------------------------
+
+# Docker shortcuts
+alias dps='docker ps'
+alias dpsa='docker ps -a'
+alias di='docker images'
+alias drm='docker rm'
+alias drmi='docker rmi'
+alias dexec='docker exec -it'
+alias dlogs='docker logs -f'
+alias dstop='docker stop $(docker ps -q)'
+alias dclean='docker system prune -af'
+
+# Docker Compose shortcuts  
+alias dc='docker-compose'
+alias dcu='docker-compose up -d'
+alias dcd='docker-compose down'
+alias dcl='docker-compose logs -f'
+alias dcr='docker-compose restart'
+alias dce='docker-compose exec'
+
+# Kubernetes shortcuts
+alias k='kubectl'
+alias kgp='kubectl get pods'
+alias kgs='kubectl get services'
+alias kgn='kubectl get nodes'
+alias kgd='kubectl get deployments'
+alias kdp='kubectl describe pod'
+alias kl='kubectl logs -f'
+alias kex='kubectl exec -it'
+alias kctx='kubectx'
+alias kns='kubens'
+alias kaf='kubectl apply -f'
+alias kdelf='kubectl delete -f'
+
+# Terraform shortcuts
+alias tf='terraform'
+alias tfi='terraform init'
+alias tfp='terraform plan'
+alias tfa='terraform apply'
+alias tfd='terraform destroy'
+alias tfv='terraform validate'
+alias tff='terraform fmt'
+alias tfo='terraform output'
+alias tfw='terraform workspace'
+
+# Ansible shortcuts
+alias ap='ansible-playbook'
+alias ag='ansible-galaxy'
+alias av='ansible-vault'
+alias ai='ansible-inventory'
+
+# AWS shortcuts
+alias awswho='aws sts get-caller-identity'
+alias awsregion='aws configure get region'
+alias awsprofile='echo $AWS_PROFILE'
+
+# Git advanced shortcuts
+alias gst='git status'
+alias gco='git checkout'
+alias gcb='git checkout -b'
+alias gp='git push'
+alias gpl='git pull'
+alias gf='git fetch'
+alias gm='git merge'
+alias grb='git rebase'
+alias glog='git log --oneline --graph --decorate'
+alias gaa='git add --all'
+alias gcm='git commit -m'
+alias gca='git commit --amend'
+alias gd='git diff'
+alias gds='git diff --staged'
+
+# Network diagnostic shortcuts
+alias ports='netstat -tulanp'
+alias listening='netstat -an | grep LISTEN'
+alias myip='curl -s https://ifconfig.me'
+alias speedtest='curl -s https://raw.githubusercontent.com/sivel/speedtest-cli/master/speedtest.py | python3 -'
+
+# System monitoring shortcuts
+alias df='df -h'
+alias du='du -h -d 1'
+alias free='free -h'
+alias topcpu='ps aux --sort=-%cpu | head'
+alias topmem='ps aux --sort=-%mem | head'
+
+# Quick directory navigation for projects
+alias cdproj='cd ~/projects'
+alias cdcode='cd ~/code'
+alias cdrepo='cd ~/repos'
+
+# JSON/YAML formatting
+if command -v jq > /dev/null; then
+    alias json='jq .'
+fi
+if command -v yq > /dev/null; then
+    alias yaml='yq .'
+fi
+
+# SSH shortcuts
+alias sshconfig='${EDITOR:-nano} ~/.ssh/config'
+alias sshkeys='ls -la ~/.ssh/*.pub'
+
+# 1Password shortcuts (if installed)
+if command -v op > /dev/null; then
+    alias ops='op signin'
+    alias opls='op item list'
+    alias opget='op item get'
+fi

@@ -1,0 +1,176 @@
+#!/bin/sh
+# -*-mode:sh-*- vim:ft=shell-script
+
+# run_once_install-devops-tools.sh.tmpl
+# =============================================================================
+# Installs essential DevOps and infrastructure tools for Linux/WSL.
+# This script runs once during chezmoi initialization.
+
+{{ if or (eq .chezmoi.os "linux") .isWSL -}}
+
+set -e
+
+echo "Installing essential DevOps and infrastructure tools..."
+
+# Detect package manager
+if command -v apt-get >/dev/null 2>&1; then
+    PKG_MGR="apt"
+elif command -v yum >/dev/null 2>&1; then
+    PKG_MGR="yum"
+elif command -v dnf >/dev/null 2>&1; then
+    PKG_MGR="dnf"
+else
+    echo "⚠️  No supported package manager found"
+    exit 0
+fi
+
+echo "Package manager: $PKG_MGR"
+
+# Function to install packages
+install_package() {
+    package=$1
+    case $PKG_MGR in
+        apt)
+            if ! dpkg -l | grep -q "^ii  $package "; then
+                echo "Installing $package..."
+                sudo apt-get install -y "$package" || echo "Failed to install $package"
+            else
+                echo "✓ $package already installed"
+            fi
+            ;;
+        yum)
+            if ! rpm -q "$package" >/dev/null 2>&1; then
+                echo "Installing $package..."
+                sudo yum install -y "$package" || echo "Failed to install $package"
+            else
+                echo "✓ $package already installed"
+            fi
+            ;;
+        dnf)
+            if ! rpm -q "$package" >/dev/null 2>&1; then
+                echo "Installing $package..."
+                sudo dnf install -y "$package" || echo "Failed to install $package"
+            else
+                echo "✓ $package already installed"
+            fi
+            ;;
+    esac
+}
+
+# Core development tools
+echo "Installing core development tools..."
+install_package "build-essential"
+install_package "curl"
+install_package "wget"
+install_package "git"
+install_package "vim"
+install_package "unzip"
+install_package "jq"
+install_package "tree"
+
+# Network and system tools
+echo "Installing network and system tools..."
+install_package "net-tools"
+install_package "dnsutils"
+install_package "netcat"
+install_package "nmap"
+install_package "htop"
+install_package "iotop"
+install_package "sysstat"
+
+# Install Docker if not already installed
+if ! command -v docker >/dev/null 2>&1; then
+    echo "Installing Docker..."
+    curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
+    sudo sh /tmp/get-docker.sh || echo "Failed to install Docker"
+    rm /tmp/get-docker.sh
+    
+    # Add user to docker group
+    sudo usermod -aG docker "$USER" || true
+    echo "✓ Docker installed (you may need to log out and back in)"
+else
+    echo "✓ Docker already installed"
+fi
+
+# Install Docker Compose if not already installed
+if ! command -v docker-compose >/dev/null 2>&1; then
+    echo "Installing Docker Compose..."
+    DOCKER_COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep 'tag_name' | cut -d\" -f4)
+    sudo curl -L "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    sudo chmod +x /usr/local/bin/docker-compose
+    echo "✓ Docker Compose installed"
+else
+    echo "✓ Docker Compose already installed"
+fi
+
+# Install kubectl if not already installed
+if ! command -v kubectl >/dev/null 2>&1; then
+    echo "Installing kubectl..."
+    curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+    sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+    rm kubectl
+    echo "✓ kubectl installed"
+else
+    echo "✓ kubectl already installed"
+fi
+
+# Install Helm if not already installed
+if ! command -v helm >/dev/null 2>&1; then
+    echo "Installing Helm..."
+    curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+    echo "✓ Helm installed"
+else
+    echo "✓ Helm already installed"
+fi
+
+# Install Terraform if not already installed
+if ! command -v terraform >/dev/null 2>&1; then
+    echo "Installing Terraform..."
+    wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+    echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+    sudo apt-get update && sudo apt-get install -y terraform || echo "Failed to install Terraform"
+    echo "✓ Terraform installed"
+else
+    echo "✓ Terraform already installed"
+fi
+
+# Install AWS CLI if not already installed
+if ! command -v aws >/dev/null 2>&1; then
+    echo "Installing AWS CLI..."
+    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip"
+    unzip -q /tmp/awscliv2.zip -d /tmp
+    sudo /tmp/aws/install || echo "Failed to install AWS CLI"
+    rm -rf /tmp/aws /tmp/awscliv2.zip
+    echo "✓ AWS CLI installed"
+else
+    echo "✓ AWS CLI already installed"
+fi
+
+# Install fzf if not already installed
+if ! command -v fzf >/dev/null 2>&1; then
+    echo "Installing fzf..."
+    git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
+    ~/.fzf/install --all --no-bash --no-fish || echo "Failed to install fzf"
+    echo "✓ fzf installed"
+else
+    echo "✓ fzf already installed"
+fi
+
+echo ""
+echo "✓ DevOps tools installation complete"
+echo ""
+echo "Installed tools include:"
+echo "  - Docker & Docker Compose"
+echo "  - kubectl (Kubernetes CLI)"
+echo "  - Helm (Kubernetes package manager)"
+echo "  - Terraform (Infrastructure as Code)"
+echo "  - AWS CLI"
+echo "  - fzf (fuzzy finder)"
+echo "  - Network tools (nmap, netcat, dnsutils)"
+echo "  - System monitoring (htop, iotop, sysstat)"
+echo ""
+
+{{ else -}}
+echo "Not running on Linux/WSL - skipping DevOps tools installation"
+echo "On macOS, run: brew bundle --global"
+{{ end -}}
