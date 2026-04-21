@@ -1,0 +1,42 @@
+## ~/.config/datadog-agent/datadog.yaml
+## =============================================================================
+## Datadog Agent configuration. Copy to the agent's system config path after
+## install:
+##   macOS: sudo cp ~/.config/datadog-agent/datadog.yaml /opt/datadog-agent/etc/datadog.yaml
+##   Linux: sudo cp ~/.config/datadog-agent/datadog.yaml /etc/datadog-agent/datadog.yaml
+## Then: sudo launchctl kickstart -k system/com.datadoghq.agent  (macOS)
+##    or: sudo systemctl restart datadog-agent  (Linux)
+
+api_key: {{ env "DD_API_KEY" | default "" }}
+site: {{ env "DD_SITE" | default "datadoghq.com" }}
+
+tags:
+  - env:dev
+  - managed_by:chezmoi
+
+# Infrastructure / host monitoring is on by default.
+logs_enabled: true
+apm_config:
+  enabled: true
+
+# Process monitoring (per-process CPU, memory, command line visibility).
+process_config:
+  process_collection:
+    enabled: true
+  container_collection:
+    enabled: true
+
+# Network Performance Monitoring. Requires system-probe + (on Linux) eBPF.
+# On macOS, NPM support is partial; the agent will disable what it can't run.
+network_config:
+  enabled: true
+
+# System probe (backs NPM + process I/O collection on Linux).
+system_probe_config:
+  enabled: true
+  network_config:
+    enabled: true
+
+# Container monitoring (Docker/containerd). No-op if no container runtime.
+docker_labels_as_tags:
+  com.datadoghq.ad.logs: '%%label%%'

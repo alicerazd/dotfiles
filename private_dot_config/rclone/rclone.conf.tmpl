@@ -1,0 +1,42 @@
+{{/*
+   ~/.config/rclone/rclone.conf
+   ===========================================================================
+   Rclone configuration for Wasabi-backed remotes.
+
+   Secrets come from the environment (WASABI_*), which chezmoi reads at apply
+   time. On dev machines, populate env via `op run --env-file=~/.op/env -- ...`
+   before running `chezmoi apply`. In CI, the workflow exports them from the
+   1Password service account before the apply step.
+
+   TODO: replace the placeholder bucket names below with your real Wasabi
+   bucket names (or keep as-is if they happen to match).
+*/}}
+[wasabi-dev]
+type = s3
+provider = Wasabi
+access_key_id = {{ env "WASABI_ACCESS_KEY_ID" | default "" }}
+secret_access_key = {{ env "WASABI_SECRET_ACCESS_KEY" | default "" }}
+endpoint = s3.us-east-1.wasabisys.com
+region = us-east-1
+acl = private
+bucket = {{ env "WASABI_BUCKET_DEV" | default "dev-shared" }}
+
+[wasabi-backups]
+type = s3
+provider = Wasabi
+access_key_id = {{ env "WASABI_ACCESS_KEY_ID" | default "" }}
+secret_access_key = {{ env "WASABI_SECRET_ACCESS_KEY" | default "" }}
+endpoint = s3.us-east-1.wasabisys.com
+region = us-east-1
+acl = private
+bucket = {{ env "WASABI_BUCKET_BACKUPS" | default "mac-backups" }}
+
+[wasabi-ci]
+type = s3
+provider = Wasabi
+access_key_id = {{ env "WASABI_ACCESS_KEY_ID" | default "" }}
+secret_access_key = {{ env "WASABI_SECRET_ACCESS_KEY" | default "" }}
+endpoint = s3.us-east-1.wasabisys.com
+region = us-east-1
+acl = private
+bucket = {{ env "WASABI_BUCKET_CI" | default "dev-shared-ci" }}

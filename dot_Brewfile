@@ -49,6 +49,8 @@ brew "pyenv"                                # Python version manager
 brew "pyenv-virtualenv"                     # virtualenv and conda manager
 brew "ruby-build"                           # Ruby version managger
 brew "rbenv"                                # Ruby environment manager
+brew "rclone"                               # Rsync for cloud storage (Wasabi mount)
+brew "restic"                               # Deduplicated, encrypted backups
 brew "ripgrep"                              # Recursive Regex search tool
 brew "rsync"                                # File transfer and sync tool
 brew "screenfetch"                          # Screenshot information tool
@@ -63,10 +65,19 @@ brew "eugenmayer/dockersync/unox"           # Docker sync daemon
 brew "heroku/brew/heroku"                   # Heroku CLI
 brew "twpayne/taps/chezmoi"                 # Chezmoi dotfiles manager
 
+# 1Password CLI + Datadog CLI for secrets + observability tooling.
+tap "1password/tap"
+brew "1password/tap/1password-cli"          # 1Password secrets CLI
+brew "datadog/tap/datadog-ci"               # Datadog CI client (pipeline/test vis)
+tap "datadog/tap"
+
+cask "1password"                            # 1Password password manager
 cask "android-platform-tools"               # Android SDK platform-tools
+cask "datadog-agent"                        # Datadog monitoring agent
 cask "font-dejavusansmono-nerd-font-mono"   # DejaVu Sans Mono Nerd Font
 cask "font-firacode-nerd-font"              # Fira Code Nerd Font
 cask "font-hack-nerd-font-mono"             # Hack Mono Nerd Font
 cask "font-meslo-nerd-font-mono"            # Meslo Mono Nerd Font
 cask "font-sourcecodepro-nerd-font-mono"    # Source Code Pro Mono Nerd Font
+cask "macfuse"                              # FUSE for macOS (rclone mount support)
 cask "powershell"                           # Cross-platform shell

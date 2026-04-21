@@ -1,0 +1,19 @@
+# ~/.config/restic/exclude.txt
+# =============================================================================
+# Paths excluded from restic backups. One pattern per line; supports globs.
+
+.cache
+.npm
+.gradle/caches
+.m2/repository
+.local/share/Trash
+Library/Caches
+Library/Logs
+Library/Application Support/Google/Chrome/*/Cache
+Library/Application Support/Firefox/Profiles/*/cache2
+node_modules
+__pycache__
+*.pyc
+Downloads
+Movies
+Music/iTunes/iTunes Media
