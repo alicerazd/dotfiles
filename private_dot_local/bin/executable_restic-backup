@@ -1,0 +1,87 @@
+#!/bin/sh
+# -*-mode:sh-*- vim:ft=shell-script
+
+# ~/.local/bin/restic-backup
+# =============================================================================
+# Runs a restic backup of $HOME to the Wasabi backups bucket. Intended to be
+# invoked from the LaunchAgent (`com.user.restic-backup.plist`) on macOS.
+#
+# Secrets are read from environment (populated by 1Password CLI):
+#   RESTIC_PASSWORD        restic repo password
+#   AWS_ACCESS_KEY_ID      Wasabi access key
+#   AWS_SECRET_ACCESS_KEY  Wasabi secret key
+#
+# If any secret is missing the script exits 0 with a note; the LaunchAgent
+# will try again at the next scheduled run.
+
+set -eu
+
+LOG_DIR="${HOME}/.cache/restic"
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/backup.log"
+
+# If op is available and we're not already authenticated via env, attempt to
+# source credentials via `op run`. Fall back to plain env if op isn't set up.
+if command -v op >/dev/null 2>&1 && [ -z "${RESTIC_PASSWORD:-}" ]; then
+    if op whoami >/dev/null 2>&1 || [ -n "${OP_SERVICE_ACCOUNT_TOKEN:-}" ]; then
+        # TODO: swap these op:// references for the actual vault/item paths you
+        # configure in 1Password.
+        RESTIC_PASSWORD=$(op read "op://Personal/restic/password" 2>/dev/null || true)
+        AWS_ACCESS_KEY_ID=$(op read "op://Personal/wasabi/access_key_id" 2>/dev/null || true)
+        AWS_SECRET_ACCESS_KEY=$(op read "op://Personal/wasabi/secret_access_key" 2>/dev/null || true)
+        export RESTIC_PASSWORD AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
+    fi
+fi
+
+if [ -z "${RESTIC_PASSWORD:-}" ] \
+   || [ -z "${AWS_ACCESS_KEY_ID:-}" ] \
+   || [ -z "${AWS_SECRET_ACCESS_KEY:-}" ]; then
+    echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] Skipping backup: required secrets missing." >> "$LOG_FILE"
+    exit 0
+fi
+
+REPO="s3:s3.us-east-1.wasabisys.com/${WASABI_BUCKET_BACKUPS:-mac-backups}"
+export RESTIC_REPOSITORY="$REPO"
+
+# Initialize the repo on first run. `restic init` errors if it already exists,
+# so swallow that specific failure.
+if ! restic snapshots >/dev/null 2>&1; then
+    restic init >> "$LOG_FILE" 2>&1 || true
+fi
+
+EXCLUDE_FILE="${HOME}/.config/restic/exclude.txt"
+EXCLUDE_ARGS=""
+[ -f "$EXCLUDE_FILE" ] && EXCLUDE_ARGS="--exclude-file=$EXCLUDE_FILE"
+
+START=$(date -u +%s)
+# shellcheck disable=SC2086
+if restic backup "$HOME" $EXCLUDE_ARGS --tag "host:$(hostname -s)" >> "$LOG_FILE" 2>&1; then
+    STATUS="success"
+    ALERT="info"
+else
+    STATUS="failed"
+    ALERT="error"
+fi
+DURATION=$(( $(date -u +%s) - START ))
+
+# Prune old snapshots weekly (Sundays). Keep ~4 weeks of dailies, ~12 months.
+if [ "$(date +%u)" = "7" ]; then
+    restic forget \
+        --keep-daily 7 \
+        --keep-weekly 4 \
+        --keep-monthly 12 \
+        --prune >> "$LOG_FILE" 2>&1 || true
+fi
+
+# Emit a Datadog event. No-op if DD_API_KEY isn't in env.
+if [ -n "${DD_API_KEY:-}" ] && command -v curl >/dev/null 2>&1; then
+    DD_SITE="${DD_SITE:-datadoghq.com}"
+    curl -s -o /dev/null \
+        -X POST "https://api.${DD_SITE}/api/v1/events" \
+        -H "Content-Type: application/json" \
+        -H "DD-API-KEY: ${DD_API_KEY}" \
+        -d "$(printf '{"title":"restic.backup.%s","text":"duration=%ss","alert_type":"%s","tags":["source:restic","host:%s"]}' \
+            "$STATUS" "$DURATION" "$ALERT" "$(hostname -s)")" || true
+fi
+
+[ "$STATUS" = "success" ] || exit 1

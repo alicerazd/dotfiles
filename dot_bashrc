@@ -233,6 +233,11 @@ export BASH_IT_AUTOMATIC_RELOAD_AFTER_CONFIG_CHANGE=1
 # Load Bash It (if installed).
 [ -s "${BASH_IT}/bash_it.sh" ] && \. "${BASH_IT}/bash_it.sh"
 
+# Starship cross-shell prompt (default). Overrides PS1 above when available.
+if [ "${DOTFILES_PROMPT:-starship}" != "p10k" ] && command -v starship > /dev/null; then
+    eval "$(starship init bash)"
+fi
+
 
 # Command-line shell completions
 # -----------------------------------------------------------------------------

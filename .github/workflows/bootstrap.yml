@@ -1,0 +1,357 @@
+name: bootstrap
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Pipeline Visibility is ambient via the Datadog GitHub App on the org; these
+# env vars additionally feed datadog-ci for Test Visibility + SCA + Static
+# Analysis.
+env:
+  DD_SITE: datadoghq.com
+  DD_ENV: ci
+  DD_SERVICE: dotfiles
+  DD_TAGS: "team:platform,repo:${{ github.repository }}"
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  secrets:
+    name: load-secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      has_op: ${{ steps.check.outputs.has_op }}
+    steps:
+      - id: check
+        run: |
+          if [ -n "${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}" ]; then
+            echo "has_op=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_op=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: secrets
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install chezmoi + actionlint + shellcheck
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y shellcheck
+          sh -c "$(curl -fsLS get.chezmoi.io)" -- -b /usr/local/bin
+          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) > /tmp/actionlint-version
+          sudo mv ./actionlint /usr/local/bin/actionlint
+
+      - name: shellcheck
+        run: shellcheck -s sh executable_dotfiles.sh private_dot_local/bin/executable_restic-backup
+
+      - name: actionlint
+        run: actionlint -color
+
+      - name: chezmoi template parse
+        env:
+          WASABI_ACCESS_KEY_ID: test
+          WASABI_SECRET_ACCESS_KEY: test
+          WASABI_BUCKET_DEV: dev-shared
+          WASABI_BUCKET_BACKUPS: mac-backups
+          WASABI_BUCKET_CI: dev-shared-ci
+          DD_API_KEY: test
+        run: |
+          chezmoi execute-template \
+            --init \
+            --promptString email=ci@example.com \
+            --promptString name='CI Bot' \
+            < .chezmoi.toml.tmpl > /dev/null
+          # Render every *.tmpl under source to catch template syntax errors.
+          find . -name '*.tmpl' -not -path './.git/*' | while read -r f; do
+            chezmoi execute-template \
+              --promptString email=ci@example.com \
+              --promptString name='CI Bot' \
+              < "$f" > /dev/null || {
+                echo "Template failed: $f" >&2
+                exit 1
+              }
+          done
+
+      - name: Datadog Static Analysis
+        if: needs.secrets.outputs.has_op == 'true'
+        uses: DataDog/datadog-static-analyzer-github-action@v1
+        with:
+          dd_api_key: ${{ secrets.DD_API_KEY }}
+          dd_app_key: ${{ secrets.DD_APP_KEY }}
+          dd_service: dotfiles
+          dd_env: ci
+          cpu_count: 2
+
+      - name: Datadog SCA
+        if: needs.secrets.outputs.has_op == 'true'
+        uses: DataDog/datadog-sca-github-action@v1
+        with:
+          dd_api_key: ${{ secrets.DD_API_KEY }}
+          dd_app_key: ${{ secrets.DD_APP_KEY }}
+          dd_service: dotfiles
+          dd_env: ci
+
+  bootstrap:
+    name: bootstrap (${{ matrix.os }})
+    needs: lint
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: ${{ matrix.os == 'windows-latest' && 10 || 20 }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v6
+
+      # --- Unix (Ubuntu + macOS) ------------------------------------------
+      - name: Install chezmoi (unix)
+        if: runner.os != 'Windows'
+        run: sh -c "$(curl -fsLS get.chezmoi.io)" -- -b /usr/local/bin
+
+      - name: Seed chezmoi.toml (unix)
+        if: runner.os != 'Windows'
+        run: |
+          mkdir -p ~/.config/chezmoi
+          cat > ~/.config/chezmoi/chezmoi.toml <<'EOF'
+          [data]
+              email = "ci@example.com"
+              name = "CI Bot"
+          EOF
+
+      - name: Scrub linuxbrew from PATH (ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          # setup_dependencies checks for `brew` and runs `brew bundle --global`
+          # if present. On GH's ubuntu runner linuxbrew is preinstalled but we
+          # want the DOTFILES_SKIP_BREW=1 path instead.
+          echo "PATH=$(echo "$PATH" | tr ':' '\n' | grep -v linuxbrew | paste -sd:)" >> "$GITHUB_ENV"
+
+      - name: Cache Homebrew bottles (macos)
+        if: runner.os == 'macOS'
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/Homebrew
+          key: ${{ runner.os }}-brew-${{ hashFiles('dot_Brewfile') }}
+          restore-keys: ${{ runner.os }}-brew-
+
+      - name: chezmoi init --apply (unix)
+        if: runner.os != 'Windows'
+        run: chezmoi init --source="$GITHUB_WORKSPACE" --apply
+
+      - name: Run bootstrap (unix, fast)
+        if: runner.os != 'Windows'
+        env:
+          DOTFILES_SKIP_DEVTOOLS: '1'
+          DOTFILES_SKIP_BREW: ${{ runner.os == 'Linux' && '1' || '0' }}
+          DOTFILES_SKIP_STORAGE: '1'
+          DOTFILES_SKIP_BACKUPS: '1'
+          DOTFILES_SKIP_MONITORING: '1'
+          DOTFILES_DD_EVENTS: '0'
+        run: ~/dotfiles.sh
+
+      - name: Smoke test rendered dotfiles (unix)
+        if: runner.os != 'Windows'
+        run: |
+          chezmoi doctor || true
+          chezmoi verify
+          test -f ~/.bashrc
+          test -f ~/.zshrc
+          test -f ~/.gitconfig
+          test -f ~/.tmux.conf
+          test -f ~/.vimrc
+          test -f ~/.p10k.zsh
+          grep -q 'email = "ci@example.com"' ~/.gitconfig
+          chezmoi --version
+
+      - name: macOS-only files present (macos)
+        if: runner.os == 'macOS'
+        run: test -f ~/.Brewfile && test -f ~/Library/LaunchAgents/com.user.restic-backup.plist
+
+      - name: Shell startup smoke (ubuntu)
+        if: runner.os == 'Linux'
+        env:
+          POWERLEVEL9K_DISABLE_INSTANT_PROMPT: quiet
+          ZSH_DISABLE_COMPFIX: 'true'
+        run: |
+          sudo apt-get install -y zsh
+          bash -lc 'echo bash OK'
+          zsh -lc 'echo zsh OK'
+
+      - name: Shell startup smoke (macos)
+        if: runner.os == 'macOS'
+        env:
+          POWERLEVEL9K_DISABLE_INSTANT_PROMPT: quiet
+          ZSH_DISABLE_COMPFIX: 'true'
+        run: |
+          bash -lc 'echo bash OK'
+          zsh -lc 'echo zsh OK'
+
+      # --- Windows --------------------------------------------------------
+      - name: Install chezmoi (windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: winget install --id twpayne.chezmoi -e --accept-source-agreements --accept-package-agreements
+
+      - name: Seed chezmoi.toml (windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.config\chezmoi" | Out-Null
+          @"
+          [data]
+              email = "ci@example.com"
+              name = "CI Bot"
+          "@ | Out-File -FilePath "$env:USERPROFILE\.config\chezmoi\chezmoi.toml" -Encoding ascii
+
+      - name: chezmoi init --apply (windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: chezmoi init --source=$env:GITHUB_WORKSPACE --apply
+
+      - name: Smoke test (windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          chezmoi verify
+          Test-Path "$env:USERPROFILE\.gitconfig" | Out-Null
+          if (Test-Path "$env:USERPROFILE\.Brewfile") {
+              throw "dot_Brewfile leaked onto Windows"
+          }
+
+  mount-verify:
+    name: wasabi mount verify
+    needs: [secrets, lint]
+    if: needs.secrets.outputs.has_op == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install rclone
+        run: curl -fsSL https://rclone.org/install.sh | sudo bash
+
+      - name: Load Wasabi + DD creds from 1Password
+        uses: 1password/load-secrets-action@v2
+        with:
+          export-env: true
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          # TODO: replace these op:// references with your actual vault/item/field paths.
+          WASABI_ACCESS_KEY_ID: op://ci/wasabi/access_key_id
+          WASABI_SECRET_ACCESS_KEY: op://ci/wasabi/secret_access_key
+          WASABI_BUCKET_CI: op://ci/wasabi/bucket_ci
+          DD_API_KEY: op://ci/datadog/api_key
+
+      - name: Render rclone.conf
+        run: |
+          mkdir -p ~/.config/rclone
+          cat > ~/.config/rclone/rclone.conf <<EOF
+          [wasabi-ci]
+          type = s3
+          provider = Wasabi
+          access_key_id = ${WASABI_ACCESS_KEY_ID}
+          secret_access_key = ${WASABI_SECRET_ACCESS_KEY}
+          endpoint = s3.us-east-1.wasabisys.com
+          region = us-east-1
+          acl = private
+          bucket = ${WASABI_BUCKET_CI}
+          EOF
+
+      - name: Mount Wasabi CI bucket
+        run: |
+          mkdir -p "$HOME/Development"
+          sudo apt-get update -qq && sudo apt-get install -y fuse3
+          rclone mount wasabi-ci: "$HOME/Development" \
+            --daemon \
+            --vfs-cache-mode writes \
+            --allow-other
+          for i in $(seq 1 15); do
+            if mount | grep -q "$HOME/Development"; then
+              echo "Mount ready after ${i}s"; exit 0
+            fi
+            sleep 1
+          done
+          echo "Mount did not appear within 15s" >&2
+          exit 1
+
+      - name: Write + read roundtrip
+        run: |
+          PREFIX="$HOME/Development/ci-test/${GITHUB_REF_NAME}/${GITHUB_SHA}"
+          mkdir -p "$PREFIX"
+          echo "hello $(date -u +%s)" > "$PREFIX/marker.txt"
+          test "$(cat "$PREFIX/marker.txt" | head -c 5)" = "hello"
+
+      - name: git clone + pull on FUSE mount
+        env:
+          BRANCH_UNDER_TEST: ${{ github.head_ref || github.ref_name }}
+        run: |
+          WORK="$HOME/Development/ci-test/${GITHUB_REF_NAME}/${GITHUB_SHA}/repo"
+          rm -rf "$WORK"
+          git clone --depth 1 --branch "${BRANCH_UNDER_TEST}" \
+            "https://github.com/${GITHUB_REPOSITORY}.git" "$WORK"
+          cd "$WORK"
+          git pull --ff-only origin "${BRANCH_UNDER_TEST}"
+          test -f README.md
+
+      - name: Cleanup CI prefix
+        if: always()
+        run: |
+          PREFIX_REL="ci-test/${GITHUB_REF_NAME}/${GITHUB_SHA}"
+          rclone purge "wasabi-ci:${PREFIX_REL}" || true
+
+      - name: Unmount
+        if: always()
+        run: fusermount3 -u "$HOME/Development" || true
+
+  datadog-test-visibility:
+    name: datadog test visibility
+    needs: [secrets, lint, bootstrap]
+    if: needs.secrets.outputs.has_op == 'true' && always() && !cancelled()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Load DD creds from 1Password
+        uses: 1password/load-secrets-action@v2
+        with:
+          export-env: true
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          DD_API_KEY: op://ci/datadog/api_key
+          DD_APP_KEY: op://ci/datadog/app_key
+
+      - name: Install shellcheck + actionlint + junit converter
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y shellcheck
+          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) > /dev/null
+          sudo mv ./actionlint /usr/local/bin/actionlint
+          npm install -g @datadog/datadog-ci checkstyle2junit
+
+      - name: shellcheck -> JUnit
+        run: |
+          shellcheck -f checkstyle executable_dotfiles.sh private_dot_local/bin/executable_restic-backup \
+            > /tmp/shellcheck.checkstyle.xml || true
+          npx checkstyle2junit /tmp/shellcheck.checkstyle.xml > /tmp/shellcheck.junit.xml || {
+            # Fallback minimal JUnit stub so upload never fails the job.
+            echo '<testsuite name="shellcheck" tests="0"/>' > /tmp/shellcheck.junit.xml
+          }
+
+      - name: Upload JUnit to Datadog Test Visibility
+        run: |
+          datadog-ci junit upload \
+            --service dotfiles \
+            --tags "test_framework:shellcheck" \
+            /tmp/shellcheck.junit.xml || true

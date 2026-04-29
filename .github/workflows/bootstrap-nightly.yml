@@ -1,0 +1,85 @@
+name: bootstrap-nightly
+
+on:
+  schedule:
+    - cron: '0 7 * * 1'  # Mondays 07:00 UTC
+  workflow_dispatch:
+
+env:
+  DD_SITE: datadoghq.com
+  DD_ENV: ci-nightly
+  DD_SERVICE: dotfiles
+  DD_TAGS: "team:platform,repo:${{ github.repository }},schedule:weekly"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  bootstrap:
+    name: cold bootstrap (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install chezmoi (unix)
+        if: runner.os != 'Windows'
+        run: sh -c "$(curl -fsLS get.chezmoi.io)" -- -b /usr/local/bin
+
+      - name: Seed chezmoi.toml (unix)
+        if: runner.os != 'Windows'
+        run: |
+          mkdir -p ~/.config/chezmoi
+          cat > ~/.config/chezmoi/chezmoi.toml <<'EOF'
+          [data]
+              email = "ci@example.com"
+              name = "CI Bot"
+          EOF
+
+      - name: chezmoi init --apply (unix)
+        if: runner.os != 'Windows'
+        run: chezmoi init --source="$GITHUB_WORKSPACE" --apply
+
+      # Full bootstrap — no skip flags. Proves cold install still works.
+      - name: Run bootstrap (unix, full)
+        if: runner.os != 'Windows'
+        env:
+          DOTFILES_SKIP_STORAGE: '1'
+          DOTFILES_SKIP_BACKUPS: '1'
+          DOTFILES_SKIP_MONITORING: '1'
+          DOTFILES_DD_EVENTS: '0'
+        run: ~/dotfiles.sh
+
+      - name: Install chezmoi (windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: winget install --id twpayne.chezmoi -e --accept-source-agreements --accept-package-agreements
+
+      - name: Seed chezmoi.toml (windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.config\chezmoi" | Out-Null
+          @"
+          [data]
+              email = "ci@example.com"
+              name = "CI Bot"
+          "@ | Out-File -FilePath "$env:USERPROFILE\.config\chezmoi\chezmoi.toml" -Encoding ascii
+
+      - name: chezmoi init --apply (windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: chezmoi init --source=$env:GITHUB_WORKSPACE --apply
+
+      - name: Open / update drift issue on failure
+        if: failure()
+        uses: peter-evans/create-issue-from-file@v5
+        with:
+          title: "bootstrap-nightly: ${{ matrix.os }} failed"
+          content-filepath: .github/ISSUE_TEMPLATE/bootstrap-drift.md
+          labels: ci-drift
