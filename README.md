@@ -14,6 +14,64 @@ Universal command set and colourful shell configurations for Bash, Zsh and Power
     <p><strong>Be sure to <a href="#" title="star">⭐️</a> or <a href="#" title="fork">🔱</a> this repo if you find it useful! 😃</strong></p>
 </div>
 
+## Quick Start 🚀
+
+### GitHub Codespaces ☁️
+
+Open this repository in a GitHub Codespace to get a fully configured development environment in seconds:
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=main)
+
+The Codespace will automatically:
+- Install and configure zsh with Oh-My-Zsh
+- Set up Powerlevel10k theme with Nerd Fonts
+- Install essential plugins (autosuggestions, syntax highlighting)
+- Apply all dotfiles using chezmoi
+- Configure cross-platform aliases and functions
+
+### Windows 11 & WSL2 🪟
+
+For the best experience on Windows, we recommend using **Windows Subsystem for Linux 2 (WSL2)** with Ubuntu:
+
+```powershell
+# In PowerShell (as Administrator)
+wsl --install -d Ubuntu-22.04
+wsl --set-default-version 2
+
+# After WSL restarts, inside Ubuntu
+sudo apt update && sudo apt upgrade -y
+
+# Install chezmoi and apply dotfiles
+sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply alicerazd/dotfiles
+```
+
+**What gets configured:**
+- ✅ WSL2 with systemd support
+- ✅ Windows interoperability (access Windows files and tools)
+- ✅ X11 forwarding for GUI apps
+- ✅ Docker Desktop integration
+- ✅ 1Password SSH agent (optional)
+- ✅ All DevOps tools (kubectl, terraform, docker, etc.)
+
+### macOS & Linux 🖥️
+
+```bash
+# Install chezmoi and apply dotfiles in one command
+# Replace 'alicerazd' with your GitHub username if you forked this repo
+sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply alicerazd/dotfiles
+
+# Or, if you already have chezmoi installed
+chezmoi init --apply alicerazd/dotfiles
+```
+
+After installation, run the setup script to install all dependencies:
+
+```bash
+~/dotfiles.sh
+```
+
+<p align="right"><a href="#top" title="Back to top">🔝</a></p>
+
 ## Project goals ⚽
 
 -   Unified set of aliases and commands.
@@ -23,6 +81,109 @@ Universal command set and colourful shell configurations for Bash, Zsh and Power
 -   Shortcuts to popular cross-platform apps.
 -   System-agnostic `update` and `dotfiles` install commands.
 -   A pretty interface! 💃
+-   **Ready-to-go DevOps workstation setup** for infrastructure engineers.
+-   **Secure secrets management** with 1Password integration.
+
+<p align="right"><a href="#top" title="Back to top">🔝</a></p>
+
+## 1Password Integration 🔐
+
+This dotfiles setup includes optional **1Password** integration for secure secrets management:
+
+### Features
+
+-   **SSH Agent**: Use 1Password as your SSH key provider
+-   **CLI Authentication**: Seamless authentication with `op` CLI
+-   **Secret References**: Reference secrets in your `.env` files
+-   **Environment Variables**: Inject secrets into your shell environment
+
+### Setup
+
+During `chezmoi init`, you'll be prompted to enable 1Password integration. To enable it later:
+
+```bash
+chezmoi init
+# Answer 'yes' when prompted for 1Password
+
+# Sign in to 1Password
+op signin
+
+# Verify it works
+op item list
+```
+
+### Usage
+
+```bash
+# Use 1Password SSH agent (auto-configured)
+ssh git@github.com
+
+# Get a secret
+op item get "GitHub Token" --fields password
+
+# Use secret references in .env files
+# DATABASE_URL=op://vault/item/field
+```
+
+<p align="right"><a href="#top" title="Back to top">🔝</a></p>
+
+## DevOps & Infrastructure Tools 🚀
+
+This setup includes comprehensive tooling for **DevOps, Network, Systems, and Infrastructure engineers**:
+
+### Container & Orchestration
+-   **Docker** & **Docker Compose** - Container platform
+-   **Kubernetes** (kubectl, helm, k9s, kubectx, kustomize) - Container orchestration
+-   **Minikube** - Local Kubernetes cluster
+
+### Infrastructure as Code
+-   **Terraform** (+ terragrunt, tflint, terraform-docs) - Infrastructure provisioning
+-   **Ansible** - Configuration management and automation
+-   **Packer** - Machine image builder
+-   **Vault** - Secrets management
+
+### Cloud Providers
+-   **AWS CLI** - Amazon Web Services
+-   **Azure CLI** - Microsoft Azure
+-   **Google Cloud SDK** (gcloud) - Google Cloud Platform
+-   **DigitalOcean CLI** (doctl) - DigitalOcean
+
+### Network & Monitoring
+-   **Network Tools**: nmap, netcat, dnsutils, tcpdump, traceroute, arp-scan
+-   **Monitoring**: htop, iotop, bandwhich, sysstat
+-   **Wireshark** - Network protocol analyzer
+
+### Version Control & CI/CD
+-   **Git** (+ git-extras, git-flow, git-lfs) - Version control
+-   **GitHub CLI** (gh) - GitHub from the command line
+-   **Travis CI** - Continuous integration
+
+### Shortcuts & Aliases
+
+100+ pre-configured aliases for common tasks:
+
+```bash
+# Docker
+dps     # docker ps
+dexec   # docker exec -it
+dlogs   # docker logs -f
+
+# Kubernetes
+k       # kubectl
+kgp     # kubectl get pods
+kl      # kubectl logs -f
+
+# Terraform
+tf      # terraform
+tfi     # terraform init
+tfp     # terraform plan
+
+# Git
+gst     # git status
+glog    # git log --oneline --graph
+```
+
+See the [aliases documentation](./dot_bash_aliases) for the complete list.
 
 <p align="right"><a href="#top" title="Back to top">🔝</a></p>
 
@@ -34,10 +195,12 @@ Use either one or many of these, the config files will be in place and ready to 
 
 -   [Bash](https://www.gnu.org/software/bash/) <sub><sup><b title="Linux">🐧</b></sup></sub><b title="macOS"></b>: [`~/.bashrc`](./dot_bashrc) _<sup>enhanced with [**Bash-It**](https://github.com/Bash-it/bash-it)!</sup>_
 -   [PowerShell 5.1+](https://github.com/PowerShell/PowerShell) <sub><sup><b title="Linux">🐧</b></sup></sub><b title="macOS"></b><b title="Windows">⊞</b>: [`~/.config/powershell/`](./dot_config/powershell/) _<sup>enhanced with [**Oh-My-Posh**](https://github.com/JanDeDobbeleer/oh-my-posh), [**Terminal Icons**](https://github.com/devblackops/Terminal-Icons), and others!</sup>_
--   [Z shell](http://zsh.sourceforge.net/) <sub><sup><b title="Linux">🐧</b></sup></sub><b title="macOS"></b>: [`~/.zshrc`](./dot_zshrc) _<sup>enhanced with [**Oh-My-Zsh**](https://ohmyz.sh/), [**Powerlevel10K**](https://github.com/romkatv/powerlevel10k), and others!</sup>_
+-   [Z shell](http://zsh.sourceforge.net/) <sub><sup><b title="Linux">🐧</b></sup></sub><b title="macOS"></b><b title="Windows (WSL)">⊞</b>: [`~/.zshrc`](./dot_zshrc) _<sup>enhanced with [**Oh-My-Zsh**](https://ohmyz.sh/), [**Powerlevel10K**](https://github.com/romkatv/powerlevel10k), and DevOps plugins!</sup>_
 
+-   [WSL2](https://docs.microsoft.com/en-us/windows/wsl/) <b title="Windows">⊞</b>: Full Linux environment on Windows with seamless integration
 ### 💻 Terminals
 
+-   [GitHub Codespaces](https://github.com/features/codespaces) ☁️ <sub><sup><b title="Linux">🐧</b></sup></sub>: [`.devcontainer/`](./.devcontainer/) _<sup>optimized for cloud development!</sup>_
 -   [Hyper](https://hyper.is/) <sub><sup><b title="Linux">🐧</b></sup></sub><b title="macOS"></b><b title="Windows">⊞</b>: [`~/.hyper.js`](./dot_hyper.js.tmpl)
 -   [iTerm2](https://iterm2.com/) <b title="macOS"></b>: [`~/.config/iterm/`](./dot_config/iterm)
 -   [macOS Terminal](https://support.apple.com/en-ca/guide/terminal/welcome/mac) <b title="macOS"></b>

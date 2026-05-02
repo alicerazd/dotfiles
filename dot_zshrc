@@ -10,6 +10,20 @@
 # shellcheck source=/dev/null
 # shellcheck disable=SC2034
 
+# Detect GitHub Codespaces environment
+if [ -n "$CODESPACES" ]; then
+    export IS_CODESPACES=true
+else
+    export IS_CODESPACES=false
+fi
+
+# Detect WSL environment
+if grep -qi microsoft /proc/version 2>/dev/null || [ -n "$WSL_DISTRO_NAME" ] || [ -n "$WSLENV" ]; then
+    export IS_WSL=true
+else
+    export IS_WSL=false
+fi
+
 # Hide default user from local prompt.
 export DEFAULT_USER="${USER}"
 
@@ -92,22 +106,48 @@ HIST_STAMPS="yyyy-mm-dd"
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
 plugins=(
-    # asdf                    # Integrates with ASDF extendable version manager
+    # Core utilities
     colored-man-pages       # Adds colors to man pages
     common-aliases          # Aliases for many commonly used commands
     cp                      # Secure `cpv` function that uses `rsync`
-    docker                  # Aliases for [Docker](https://www.docker.com/)
-    docker-compose          # Aliases for [Docker-Compose](https://docs.docker.com/compose/)
+    direnv                  # Directory-specific environment variables
     dotenv                  # Load project ENV variables from folder `.env` files
     extract                 # Multi-format decompression function `x`
+    fzf                     # Fuzzy finder integration
     history                 # Aliases for `history` command
     pj                      # Project Jump folder shortcuts
     rsync                   # Aliases for `rsync` command
     sublime                 # Aliases for [Sublime Text](https://www.sublimetext.com/)
-    systemadmin             # Utilities for SysAdmins.
-    z                       # Tracks your most used directories.
-    zsh-autosuggestions     # Command suggestions based on history and completions (https://github.com/zsh-users/zsh-autosuggestions)
-    zsh-syntax-highlighting # Fish shell like syntax highlighting (https://github.com/zsh-users/zsh-syntax-highlighting)
+    systemadmin             # Utilities for SysAdmins
+    z                       # Tracks your most used directories
+    
+    # Git & Version Control
+    git                     # Git aliases and functions
+    git-extras              # Additional git utilities
+    git-flow                # Git-flow support
+    github                  # GitHub CLI support
+    
+    # DevOps & Cloud
+    ansible                 # Ansible aliases and completions
+    aws                     # AWS CLI completions
+    azure                   # Azure CLI completions
+    docker                  # Docker aliases and completions
+    docker-compose          # Docker Compose aliases
+    gcloud                  # Google Cloud SDK completions
+    helm                    # Helm completions
+    kubectl                 # Kubernetes CLI completions
+    kubectx                 # Kubernetes context switching
+    terraform               # Terraform completions
+    
+    # Infrastructure & Monitoring
+    systemd                 # Systemd aliases
+    
+    # Enhanced shell experience
+    zsh-autosuggestions     # Command suggestions based on history
+    zsh-syntax-highlighting # Fish shell like syntax highlighting
+    
+    # 1Password (if installed)
+    # 1password              # 1Password CLI support (enable after installing)
 )
 #    composer                # Aliases for [Composer](https://getcomposer.org/)
 #    symfony2                # Completion for [Symfony 2](https://symfony.com/)
@@ -224,6 +264,54 @@ fi
 # Point ripgrep to its configuration file.
 # See https://github.com/BurntSushi/ripgrep/blob/master/GUIDE.md
 export RIPGREP_CONFIG_PATH="$HOME/.ripgreprc"
+
+
+# 1Password Integration
+# -----------------------------------------------------------------------------
+
+# Enable 1Password SSH agent if available
+if [ -S "$HOME/.1password/agent.sock" ]; then
+    export SSH_AUTH_SOCK="$HOME/.1password/agent.sock"
+elif [ -S "$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" ]; then
+    # macOS location
+    export SSH_AUTH_SOCK="$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
+fi
+
+# Load 1Password CLI completions if available
+if command -v op > /dev/null; then
+    eval "$(op completion zsh)"; compdef _op op
+fi
+
+
+# WSL-specific Configuration
+# -----------------------------------------------------------------------------
+
+if [ "$IS_WSL" = "true" ]; then
+    # Fix interop between WSL and Windows
+    # Avoid adding Windows paths multiple times
+    if [[ ! "$PATH" =~ "/mnt/c/Windows" ]]; then
+        # Add Windows paths for easy access to Windows tools
+        export PATH="$PATH:/mnt/c/Windows/System32:/mnt/c/Windows"
+    fi
+    
+    # Set DISPLAY for X11 forwarding (WSL2)
+    if grep -qi "WSL2\|microsoft-standard" /proc/version 2>/dev/null; then
+        export DISPLAY=$(awk '/nameserver/ {print $2; exit}' /etc/resolv.conf):0
+    fi
+    
+    # Windows-WSL clipboard integration
+    if command -v clip.exe > /dev/null; then
+        alias pbcopy='clip.exe'
+    fi
+    if command -v powershell.exe > /dev/null; then
+        alias pbpaste='powershell.exe Get-Clipboard'
+    fi
+    
+    # Docker Desktop integration (if using Docker Desktop for Windows)
+    if [ -S "/var/run/docker.sock" ]; then
+        export DOCKER_HOST="unix:///var/run/docker.sock"
+    fi
+fi
 
 
 # Includes

@@ -1,0 +1,62 @@
+#!/bin/sh
+# -*-mode:sh-*- vim:ft=shell-script
+
+# run_once_before_setup-wsl.sh.tmpl
+# =============================================================================
+# Sets up WSL2-specific configuration and optimizations.
+# This script runs once before other chezmoi scripts on WSL2 systems.
+
+{{ if .isWSL -}}
+
+set -e
+
+echo "Configuring WSL2 environment..."
+
+# Detect WSL version
+if grep -qi microsoft /proc/version; then
+    echo "✓ WSL detected"
+    
+    # Check if it's WSL2
+    if grep -qi "WSL2\|microsoft-standard" /proc/version; then
+        echo "✓ Running on WSL2"
+    else
+        echo "⚠️  Running on WSL1 - some features may not work optimally"
+    fi
+fi
+
+# Configure WSL-specific settings
+if [ ! -f /etc/wsl.conf ]; then
+    echo "Creating /etc/wsl.conf with recommended settings..."
+    sudo tee /etc/wsl.conf > /dev/null << 'EOF'
+[boot]
+systemd=true
+
+[network]
+generateResolvConf=true
+generateHosts=true
+
+[interop]
+enabled=true
+appendWindowsPath=true
+
+[user]
+default={{ .chezmoi.username }}
+EOF
+    echo "✓ Created /etc/wsl.conf"
+else
+    echo "✓ /etc/wsl.conf already exists"
+fi
+
+# Update apt cache if on Debian/Ubuntu
+if command -v apt-get >/dev/null 2>&1; then
+    echo "Updating package lists..."
+    sudo apt-get update -qq || echo "⚠️  Failed to update package lists"
+fi
+
+echo "✓ WSL2 setup complete"
+echo "Note: You may need to restart WSL for some changes to take effect:"
+echo "  Run in PowerShell: wsl --shutdown"
+
+{{ else -}}
+echo "Not running on WSL - skipping WSL setup"
+{{ end -}}

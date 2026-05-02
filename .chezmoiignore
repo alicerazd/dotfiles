@@ -10,7 +10,11 @@
 *.gz
 LICENSE
 README.md
+ZSH_QUICKSTART_IMPLEMENTATION.md
 com.googlecode.iterm2.plist
+.devcontainer
+.devcontainer/**
+azure-pipelines.yml
 
 # Ignore non-macOS files.
 {{ if ne .chezmoi.os "darwin" -}}
@@ -21,4 +25,8 @@ dot_Brewfile
 # Ignore non-Windows files.
 {{ if ne .chezmoi.os "windows" -}}
 dot_config/windows_terminal
+run_hyper.bat.tmpl
+run_powershell.bat.tmpl
+run_windows_terminal.bat.tmpl
 {{- end }}
+IMPLEMENTATION_SUMMARY.md
